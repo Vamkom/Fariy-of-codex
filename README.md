@@ -60,7 +60,7 @@ python .\tools\package.py --output .\dist\Fairy-Companion-v0.3.1-source.zip
 python .\tools\package.py --binaries --output .\dist\Fairy-Companion-v0.3.1-windows-x64.zip
 ```
 
-打包器使用文件白名单，不会把整个工作目录压缩。仓库结构、发布流程和检查项见 [发布指南](docs/RELEASING.md)。GitHub Actions 对提交和 PR 执行检查；推送 `v*` 标签时重新验证、编译并发布预览 Release，只上传白名单程序、源码 ZIP 与校验文件。
+打包器使用文件白名单，不会把整个工作目录压缩。仓库结构、发布流程和检查项见 [发布指南](docs/RELEASING.md)。GitHub Actions 对提交和 PR 执行检查；主分支更新 `VERSION` 或推送 `v*` 标签时重新验证、编译并发布预览 Release，只上传白名单程序、源码 ZIP 与校验文件。
 
 ## 素材与许可
 

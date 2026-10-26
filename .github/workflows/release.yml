@@ -1,0 +1,52 @@
+name: Publish preview release
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - VERSION
+    tags:
+      - 'v*'
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Validate and compile
+        shell: powershell
+        run: |
+          python -m pip install -r requirements.txt
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -m unittest discover -s tests -v
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          .\Install.ps1 -BuildOnly -NoShortcuts
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check app/skin-runtime.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Package public files only
+        shell: pwsh
+        run: |
+          $releaseVersion = (Get-Content -LiteralPath VERSION -Raw).Trim()
+          if ($releaseVersion -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') { throw 'Invalid VERSION' }
+          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne $releaseVersion) { throw 'Tag does not match VERSION' }
+          python tools/package.py --output "dist/Fairy-Companion-$releaseVersion-source.zip"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python tools/package.py --binaries --output "dist/Fairy-Companion-$releaseVersion-windows-x64.zip"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Publish GitHub prerelease
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $releaseVersion = (Get-Content -LiteralPath VERSION -Raw).Trim()
+          $assets = @(Get-ChildItem -LiteralPath dist -File | ForEach-Object { $_.FullName })
+          gh release create $releaseVersion @assets --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --prerelease --title "Fairy Companion $releaseVersion - Windows Preview" --notes-file docs/RELEASE_NOTES.md
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

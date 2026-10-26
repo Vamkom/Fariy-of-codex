@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "canvas": 238,
+  "circles": [
+    {"radius":111,"fill":"#08234b","stroke":"#52afff","width":1.2},
+    {"radius":97,"fill":"#051c41","stroke":"#0a3671","width":0.8}
+  ],
+  "diamond":{"points":"0,0 0,0 0,0","fill":"transparent"},
+  "rings":[
+    {"radius":70,"fill":"transparent","stroke":"#78bfff","width":3},
+    {"radius":46,"fill":"transparent","stroke":"#286590","width":2}
+  ],
+  "orb":{"x":119,"y":119,"radius":8,"fill":"#b6e1ff"}
+}

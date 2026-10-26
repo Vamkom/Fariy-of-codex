@@ -1,0 +1,25 @@
+# Local settings, conversation output and runtime data
+.venv/
+app/config.json
+app/config.tmp
+app/*.log
+app/*-state.json
+app/launcher-warning.txt
+app/native-*.png
+__pycache__/
+*.pyc
+app/*.exe
+app/assets/*
+!app/assets/default-emblem.json
+app/skin/*
+private/
+dist/
+.validation/
+*.zip
+*.ckpt
+*.pth
+*.safetensors
+*.mp4
+*.wav
+*.jsonl
+.env*

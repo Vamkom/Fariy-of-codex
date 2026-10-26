@@ -1,0 +1,64 @@
+/* Fairy HDD skin: paints native Codex surfaces without replacing native controls. */
+html[data-fairy-hdd="v2"] {
+  color-scheme: dark;
+  --dream-art: none !important;
+  --dream-accent: #78bfff !important;
+  --fairy-background: #090d14;
+  --fairy-panel: #111a27;
+  --fairy-line: #36526e;
+  --fairy-text: #e7f1fb;
+  --fairy-hdd-art: none;
+}
+html[data-fairy-hdd="v2"] body {
+  background: #090d14 !important;
+  color: #e7f1fb;
+}
+html[data-fairy-hdd="v2"] main:is(.bg-surface,.main-surface,[data-app-shell-main-surface],[class*="_MainContentSurface_"]) {
+  position:relative;
+  isolation:isolate;
+  background-color: #0d131d !important;
+  background-image: repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(114,174,237,.018) 3px,rgba(114,174,237,.018) 4px) !important;
+}
+/* Blur the artwork alone; text and controls stay on an unfiltered layer. */
+html[data-fairy-hdd="v2"] main:is(.bg-surface,.main-surface,[data-app-shell-main-surface],[class*="_MainContentSurface_"])::before {
+  content:"";
+  position:absolute;
+  inset:-24px;
+  z-index:-1;
+  pointer-events:none;
+  background-image:linear-gradient(90deg,rgba(3,12,23,.26),rgba(3,12,23,.08)),var(--fairy-hdd-art);
+  background-size:cover;
+  background-position:center;
+  background-repeat:no-repeat;
+  filter:blur(10px) brightness(.56) saturate(.85);
+}
+html[data-fairy-hdd="v2"] aside.app-shell-left-panel {
+  background: linear-gradient(165deg,rgba(18,28,42,.93),rgba(8,14,23,.96) 70%) !important;
+  border-inline-end: 1px solid #36526e !important;
+  box-shadow: 6px 0 24px #0004;
+}
+html[data-fairy-hdd="v2"] aside.app-shell-left-panel::after {
+  content:"";position:absolute;left:14px;right:14px;bottom:0;height:3px;pointer-events:none;
+  background:repeating-linear-gradient(120deg,#d4e86d 0 7px,#15202c 7px 13px);
+  opacity:.65;
+}
+html[data-fairy-hdd="v2"] header:is(.app-header-tint,.draggable,[data-app-shell-header-edge-scroll],[class*="_Header_"]) {
+  background-color: #0e1723 !important;
+  border-bottom-color: #36526e !important;
+}
+html[data-fairy-hdd="v2"] :is(.composer-surface-chrome,[data-codex-composer-root] [data-composer-layout][data-composer-surface-variant]) {
+  background: linear-gradient(120deg,#172333,#111a27) !important;
+  border:1px solid #526f8d !important;
+  border-radius:10px !important;
+  box-shadow:0 0 0 1px #79baff0d,0 12px 35px #0003 !important;
+}
+html[data-fairy-hdd="v2"] :is(.composer-surface-chrome,[data-codex-composer-root] [data-composer-layout][data-composer-surface-variant]):focus-within {
+  border-color:#78bfff !important;
+  box-shadow:0 0 0 2px #78bfff25 !important;
+}
+html[data-fairy-hdd="v2"] aside :is([aria-current="page"],[data-selected="true"]) {
+  background-color:#203951 !important;
+  border-inline-start:2px solid #83c7ff;
+}
+html[data-fairy-hdd="v2"] ::selection {background:#3b6387;color:#fff;}
+@media (prefers-reduced-motion:reduce) {html[data-fairy-hdd="v2"] * {scroll-behavior:auto !important;}}

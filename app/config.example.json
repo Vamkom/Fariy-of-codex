@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "name": "Fairy",
+  "greeting": "主人，您的首席助手 Fairy 已上线。今天的难题请交给我，电费账单可以晚点再看。",
+  "token": "",
+  "sessionPath": "",
+  "skinEnabled": true,
+  "nodeExecutable": "",
+  "ffmpegExecutable": "",
+  "tts": {
+    "enabled": false,
+    "endpoint": "http://127.0.0.1:9880",
+    "gptWeights": "",
+    "sovitsWeights": "",
+    "referenceAudio": "",
+    "promptText": "",
+    "engineCommand": [],
+    "engineWorkingDirectory": ""
+  }
+}
