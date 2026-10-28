@@ -4,7 +4,7 @@
 
 Windows 上的非官方 Fairy 风格桌面组件：HDD 配色、开屏、角色语气和可选本地语音。
 
-这是从个人原型整理出的 **v0.3.1 社区预览版**。当前机器已验证；尚未在第二台实体电脑完成全功能验证。不是 OpenAI 或 HoYoverse 官方产品，也不是可在所有 Codex 客户端直接安装的官方插件。
+这是从个人原型整理出的 **v0.3.2 社区预览版**。当前机器已验证；尚未在第二台实体电脑完成全功能验证。不是 OpenAI 或 HoYoverse 官方产品，也不是可在所有 Codex 客户端直接安装的官方插件。
 
 ## 新电脑怎么装
 
@@ -56,8 +56,8 @@ Windows 上的非官方 Fairy 风格桌面组件：HDD 配色、开屏、角色�
 ```powershell
 python -m unittest discover -s tests -v
 powershell -NoProfile -File .\Install.ps1 -BuildOnly -NoShortcuts
-python .\tools\package.py --output .\dist\Fairy-Companion-v0.3.1-source.zip
-python .\tools\package.py --binaries --output .\dist\Fairy-Companion-v0.3.1-windows-x64.zip
+python .\tools\package.py --output .\dist\Fairy-Companion-v0.3.2-source.zip
+python .\tools\package.py --binaries --output .\dist\Fairy-Companion-v0.3.2-windows-x64.zip
 ```
 
 打包器使用文件白名单，不会把整个工作目录压缩。仓库结构、发布流程和检查项见 [发布指南](docs/RELEASING.md)。GitHub Actions 对提交和 PR 执行检查；主分支更新 `VERSION` 或推送 `v*` 标签时重新验证、编译并发布预览 Release，只上传白名单程序、源码 ZIP 与校验文件。
@@ -71,3 +71,23 @@ python .\tools\package.py --binaries --output .\dist\Fairy-Companion-v0.3.1-wind
 ## HDD 界面背景（2026-10-26）
 
 将自己的 HDD PNG 放到 app/skin/hdd-background.png（原型目录为 skin/hdd-background.png），换肤服务会读取图片并以静态虚化、压暗的方式铺到聊天背景；不模糊文字和控件。只用本机文件，恢复换肤会移除背景。图片包含在私人导入白名单，公开发行 ZIP 不含该图。
+
+## 浮窗与朗读稳定性更新
+
+按住 Fairy 图标左键拖动，松开后记住位置；右键菜单“始终置顶”默认开启，可关闭；“回到左下角”用于复位。重播开屏后也会回到保存的位置。
+
+浮窗状态显示“正在合成”“朗读就绪”或连接故障。朗读仍仅限配置里明确选中的单个聊天的新最终回复，不朗读进度说明。CPU 推理有等待时间。
+
+重复连接不再覆盖正在播放的问候文件；播放器结束后关闭媒体句柄。新回复排队而非取消上一条，服务重启后自动重置音频游标；断线时会尝试重连本包服务。窗口位置保存在本机 window-settings.json，不包含在公开包里。
+
+## 文字气泡消隐（2026-10-27）
+
+朗读期间气泡保留；最后一段朗读结束后停留10秒，再用650毫秒渐隐。没有音频时，从显示文字开始计时。只隐藏文字面板，Fairy图标保留。
+
+可点击气泡右上角“×”，或在Fairy右键菜单选择“隐藏文字气泡”。右键菜单“显示文字气泡（10秒）”可重新唤出。检测到拖动、打开菜单或使用键鼠后，等待2秒再用650毫秒渐隐，语音继续播放；连续操作不会无限推迟收起。下次新语音会按用户是否正在操作决定是否显示气泡。
+
+仅使用Windows最后一次输入时间判断是否正在操作，不记录按键、鼠标位置或输入内容。状态提示的轮询更新不会重置10秒计时。
+
+### 始终显示气泡
+
+右键 Fairy 可勾选“始终显示气泡”，该选项会记住到下次启动。开启后，不因键鼠操作或无朗读10秒自动隐藏；仍可用“×”或菜单手动隐藏，再用“显示文字气泡”唤出。取消勾选后恢复2秒操作缓冲与10秒无朗读消隐。

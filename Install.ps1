@@ -40,7 +40,7 @@ try {
         $iconBuilder = Start-Process -FilePath (Join-Path $appRoot 'ExportFairyIcon.exe') -Wait -PassThru -WindowStyle Hidden
         if ($iconBuilder.ExitCode -ne 0) { throw 'Icon export failed.' }
     }
-    & $compiler /nologo /codepage:65001 /target:winexe /out:FairyCompanion.exe /win32manifest:FairyCompanion.manifest /win32icon:assets\fairy.ico @references /reference:System.Net.Http.dll FairyCompanion.cs FairyEmblem.cs OpeningPlayer.cs
+    & $compiler /nologo /codepage:65001 /target:winexe /out:FairyCompanion.exe /win32manifest:FairyCompanion.manifest /win32icon:assets\fairy.ico @references /reference:System.Net.Http.dll FairyCompanion.cs FairyEmblem.cs OpeningPlayer.cs WindowPreferences.cs
     if ($LASTEXITCODE -ne 0) { throw 'Companion build failed. Close this installation before rebuilding.' }
     & $compiler /nologo /codepage:65001 /target:winexe /out:FairyLauncher.exe /win32icon:assets\fairy.ico /reference:System.Windows.Forms.dll FairyLauncher.cs
     if ($LASTEXITCODE -ne 0) { throw 'Launcher build failed.' }

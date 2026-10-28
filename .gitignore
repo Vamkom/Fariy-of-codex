@@ -2,6 +2,8 @@
 .venv/
 app/config.json
 app/config.tmp
+app/window-settings.json
+app/qa-*.json
 app/*.log
 app/*-state.json
 app/launcher-warning.txt

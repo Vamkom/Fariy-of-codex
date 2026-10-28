@@ -12,6 +12,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import wave
+import time
+from voice_cache import cached_path, write_cache
 from replies import ReplyReader
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -26,6 +28,7 @@ if urllib.parse.urlsplit(ENGINE).hostname not in ('127.0.0.1', 'localhost', '::1
 OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 VOICE_LOCK = threading.Lock()
 STATE = {'ready': False}
+STREAM_ID = secrets.token_hex(12)
 GREETING = ROOT / 'assets/greeting.wav'
 CACHE_META = ROOT / 'assets/greeting.json'
 STATIC = {name: ROOT / name for name in (
@@ -39,10 +42,7 @@ def signature():
 
 
 def greeting_cached():
-    try:
-        return GREETING.is_file() and json.loads(CACHE_META.read_text())['signature'] == signature()
-    except (OSError, ValueError, KeyError):
-        return False
+    return cached_path(GREETING, CACHE_META, signature()) is not None
 
 
 def request_engine(path, payload=None):
@@ -77,22 +77,39 @@ def synthesize(text):
 def prepare_voice():
     if not CONFIG['tts'].get('enabled'):
         raise RuntimeError('Voice is disabled. Run Configure first.')
-    STATE['ready'] = False
+    if STATE['ready'] and greeting_cached():
+        return
     for key in ('gptWeights', 'sovitsWeights', 'referenceAudio'):
         if not Path(CONFIG['tts'][key]).is_file():
             raise RuntimeError('缺少 Fairy 权重或参考音频，请检查 config.json。')
     for route, key in (('/set_gpt_weights', 'gptWeights'), ('/set_sovits_weights', 'sovitsWeights')):
         query = urllib.parse.urlencode({'weights_path': CONFIG['tts'][key]})
         request_engine(route + '?' + query)
-    if greeting_cached():
-        STATE['ready'] = True
-        return
-    data = synthesize(CONFIG['greeting'])
-    temporary = GREETING.with_suffix('.tmp')
-    temporary.write_bytes(data)
-    temporary.replace(GREETING)
-    CACHE_META.write_text(json.dumps({'signature': signature()}))
+    # Model readiness must not be lost merely because a greeting file is busy.
     STATE['ready'] = True
+    if not greeting_cached():
+        write_cache(GREETING, CACHE_META, signature(), synthesize(CONFIG['greeting']))
+    STATE.pop('error', None)
+
+
+def maintain_voice():
+    while True:
+        if not CONFIG['tts'].get('enabled'):
+            return
+        if VOICE_LOCK.locked():
+            time.sleep(3)
+            continue
+        try:
+            with OPENER.open(ENGINE + '/openapi.json', timeout=3) as response:
+                response.read(1)
+            if not STATE['ready'] and VOICE_LOCK.acquire(blocking=False):
+                try:
+                    prepare_voice()
+                finally:
+                    VOICE_LOCK.release()
+        except (OSError, RuntimeError) as error:
+            STATE.update(ready=False, error=str(error))
+        time.sleep(10)
 
 
 REPLIES = ReplyReader(CONFIG['sessionPath'], ROOT, VOICE_LOCK, lambda: STATE['ready'], synthesize) if CONFIG.get('sessionPath') else None
@@ -147,15 +164,17 @@ class Handler(BaseHTTPRequestHandler):
                 after = int(urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query).get('after', ['0'])[0])
             except ValueError:
                 return self.respond(400, {'error': 'Invalid cursor'})
-            return self.respond(200, {'items': REPLIES.items_after(after) if REPLIES else []})
+            return self.respond(200, {'items': REPLIES.items_after(after) if REPLIES else [], 'streamId': STREAM_ID, 'latest': REPLIES.counter if REPLIES else 0})
         if route == '/api/status':
-            return self.respond(200, {'ready': STATE['ready'], 'greetingCached': greeting_cached(), 'instance': instance_id()})
+            return self.respond(200, {'ready': STATE['ready'], 'greetingCached': greeting_cached(), 'instance': instance_id(), 'error': STATE.get('error'), 'reader': REPLIES.status() if REPLIES else None})
         if route == '/api/config':
             if not hmac.compare_digest(self.headers.get('X-Fairy-Token', ''), CONFIG['token']):
                 return self.respond(403, {'error': 'Invalid Fairy token'})
             return self.respond(200, {'enabled': True, 'api': BASE, 'token': CONFIG['token'], 'greeting': CONFIG['greeting']})
         if route == '/assets/greeting.wav' and not greeting_cached():
             return self.respond(404, {'error': '问候尚未合成'})
+        if route == '/assets/greeting.wav':
+            return self.serve_media(cached_path(GREETING, CACHE_META, signature()))
         name = 'index.html' if route == '/' else route.lstrip('/')
         path = STATIC.get(name)
         if path is None or not path.is_file():
@@ -219,7 +238,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.respond(409, {'error': 'Fairy 正在处理另一段语音，请稍后重试。'})
         try:
             self.handle_speech(urllib.parse.urlsplit(self.path).path, payload)
-        except RuntimeError as error:
+        except (RuntimeError, OSError) as error:
             self.respond(503, {'error': str(error)})
         finally:
             VOICE_LOCK.release()
@@ -255,6 +274,7 @@ if __name__ == '__main__':
     server = ThreadingHTTPServer(('127.0.0.1', PORT), Handler)
     print('Fairy preview: ' + BASE, flush=True)
     if REPLIES: REPLIES.start()
+    threading.Thread(target=maintain_voice, daemon=True, name='fairy-voice-reconnect').start()
     try:
         server.serve_forever()
     except KeyboardInterrupt:

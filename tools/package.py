@@ -11,7 +11,7 @@ TOP = {'README.md', 'LICENSE', 'NOTICE.md', 'SECURITY.md', 'CONTRIBUTING.md', 'C
 APP = {'FairyCompanion.cs', 'FairyCompanion.manifest', 'FairyEmblem.cs', 'OpeningPlayer.cs',
        'FairyLauncher.cs', 'FairyStopper.cs', 'ExportFairyIcon.cs', 'replies.py', 'server.py',
        'launch.py', 'stop_fairy.py', 'appconfig.py', 'prepare_opening.py', 'skin-runtime.cjs',
-       'codex-hdd.css', 'config.example.json'}
+       'codex-hdd.css', 'config.example.json', 'voice_cache.py', 'WindowPreferences.cs'}
 BINARIES = {'FairyCompanion.exe', 'FairyLauncher.exe', 'FairyStopper.exe'}
 
 

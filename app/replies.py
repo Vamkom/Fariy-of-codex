@@ -1,6 +1,6 @@
 """Read completed replies from this one Codex chat and synthesize local audio."""
 from __future__ import annotations
-import collections,json,re,threading,time
+import collections,json,re,threading,time,secrets
 from pathlib import Path
 
 
@@ -33,8 +33,9 @@ class ReplyReader:
     def __init__(self,path,root,voice_lock,ready,synthesize):
         self.path=Path(path);self.root=Path(root);self.voice_lock=voice_lock
         self.ready=ready;self.synthesize=synthesize;self.lock=threading.Lock()
-        self.messages=collections.deque(maxlen=4);self.audio=collections.deque(maxlen=64)
+        self.messages=collections.deque();self.audio=collections.deque(maxlen=256)
         self.counter=0;self.generation=0;self.seen=set();self.error=None
+        self.stream=secrets.token_hex(8);self.synthesizing=False
         self.offset=self.path.stat().st_size if self.path.exists() else 0
         self.stop_event=threading.Event()
 
@@ -47,7 +48,11 @@ class ReplyReader:
 
     def publish(self,text):
         with self.lock:
-            self.generation+=1;self.messages.clear();self.messages.append((self.generation,text))
+            self.generation+=1;self.messages.append((self.generation,text))
+
+    def status(self):
+        with self.lock:
+            return {'bound':True,'fileExists':self.path.is_file(),'queued':len(self.messages),'synthesizing':self.synthesizing,'error':self.error}
 
     def watch(self):
         pending=b''
@@ -73,19 +78,29 @@ class ReplyReader:
             if not self.ready():continue
             with self.lock:
                 job=self.messages.popleft() if self.messages else None
-            if job:self.render_message(*job)
+            if job:
+                self.synthesizing=True
+                try:self.render_message(*job)
+                finally:self.synthesizing=False
 
     def render_message(self,generation,text):
         for part in chunks(text):
-            if generation!=self.generation:return
+            if self.stop_event.is_set():return
             try:
-                with self.voice_lock:data=self.synthesize(part)
-                if generation!=self.generation:return
+                # Retry transient engine restarts without dropping this sentence.
+                for attempt in range(4):
+                    try:
+                        with self.voice_lock:data=self.synthesize(part)
+                        break
+                    except Exception:
+                        if attempt==3:raise
+                        if self.stop_event.wait(2*(attempt+1)):return
                 with self.lock:
-                    self.counter+=1;name=f'reply-{self.counter}.wav'
+                    self.counter+=1;name=f'reply-{self.stream}-{self.counter}.wav'
                     target=self.root/'assets'/name;temporary=target.with_suffix('.tmp')
                     temporary.write_bytes(data);temporary.replace(target)
                     self.audio.append({'id':self.counter,'file':name})
+                    self.error=None
                 print('Fairy reply audio ready: '+str(self.counter),flush=True)
             except Exception as error:
                 self.error=str(error);print('Fairy reply synthesis failed: '+str(error),flush=True);return
